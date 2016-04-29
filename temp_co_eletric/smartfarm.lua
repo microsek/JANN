@@ -8,7 +8,6 @@ ck=0
 tmrsent=0
 co=0
 pin_power=1
-serverip="192.168.1.12"
 gpio.mode(pin_power,gpio.INPUT)
 
 function ReadDHT()
@@ -45,7 +44,7 @@ print(gpio.read(pin_power))
             ck=1
         elseif( status == dht.ERROR_TIMEOUT ) then
            display('DHT11 error.',temp,humi,co,power)
-            ck=1 
+            ck=1
         end
     -- release module
     dht=nil
@@ -60,22 +59,32 @@ function sendTS(humi,temp)
 
 -- conection to thingspeak.com
 print("Sending data to local")
+
+conn = nil
 conn=net.createConnection(net.TCP, 0) 
-conn:on("receive", function(conn, payload) print(payload) end)
--- api.thingspeak.com 184.106.153.149
-conn:connect(80,serverip) 
-conn:send("GET /sensor2/receive.php?temp="..temp.."&co="..co.."&humi="..humi.."&elec="..sendpower.." HTTP/1.1\r\n")
-conn:send("Host: "..serverip.."\r\n") 
-conn:send("Accept: */*\r\n") 
-conn:send("User-Agent: Mozilla/4.0 (compatible; esp8266 Lua; Windows NT 5.1)\r\n")
-conn:send("\r\n")
-conn:on("sent",function(conn)
-                      print("Closing connection")
-                      conn:close()
-                  end)
-conn:on("disconnection", function(conn)
-          print("Got disconnection...")
-  end)
+conn:on("receive", function(conn, payload) 
+                       success = true
+                       print(payload) 
+                       end) 
+
+-- when connected, request page (send parameters to a script)
+conn:on("connection", function(conn, payload) 
+                       print('\nConnected') 
+                       conn:send("GET /TM1/sensor3/receive.php?"
+                        .."temp="..temp
+                        .."&co="..co
+                        .."&humi="..humi
+                        .."&elec=="..sendpower
+                        .." HTTP/1.1\r\n" 
+                        .."Host: csmju.jowave.com\r\n" 
+                          .."Connection: close\r\n"
+                        .."Accept: */*\r\n" 
+                        .."User-Agent: Mozilla/4.0 (compatible; esp8266 Lua; Windows NT 5.1)\r\n" 
+                        .."\r\n")
+                       end) 
+conn:on("disconnection", function(conn, payload) print('\nDisconnected') end)
+                                             
+conn:connect(80,'csmju.jowave.com') 
 
 print("Sending data to thingspeak.com")
 conn=net.createConnection(net.TCP, 0) 
