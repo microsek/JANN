@@ -11,7 +11,7 @@ light=0
 pulse1=0
 count = 0
 consumption = 0
-serverip = "192.168.1.12"
+
 -- setup
 gpio.mode(gaspin, gpio.OUTPUT)
 gpio.mode(lightpin, gpio.OUTPUT)
@@ -74,22 +74,33 @@ function sendTS(humi,temp)
 
     if ( tmrsent==30) then
         print("Sending data to local")
+
+conn = nil
 conn=net.createConnection(net.TCP, 0) 
-conn:on("receive", function(conn, payload) print(payload) end)
--- api.thingspeak.com 184.106.153.149
-conn:connect(80,serverip) 
-conn:send("GET /sensor2/receive.php?me="..Methane.."&water="..water.."&light="..light.." HTTP/1.1\r\n") 
-conn:send("Host: "..serverip.."\r\n") 
-conn:send("Accept: */*\r\n") 
-conn:send("User-Agent: Mozilla/4.0 (compatible; esp8266 Lua; Windows NT 5.1)\r\n")
-conn:send("\r\n")
-conn:on("sent",function(conn)
-        print("Closing connection")
-              conn:close()
-                end)
-conn:on("disconnection", function(conn)
-          print("Got disconnection...")
-  end)    
+conn:on("receive", function(conn, payload) 
+                       success = true
+                       print(payload) 
+                       end) 
+
+-- when connected, request page (send parameters to a script)
+conn:on("connection", function(conn, payload) 
+                       print('\nConnected') 
+                       conn:send("GET /TM1/sensor3/receive.php?"
+                        .."me="..Methane
+                        .."&water="..water
+                        .."&light="..light
+                        .." HTTP/1.1\r\n" 
+                        .."Host: csmju.jowave.com\r\n" 
+                          .."Connection: close\r\n"
+                        .."Accept: */*\r\n" 
+                        .."User-Agent: Mozilla/4.0 (compatible; esp8266 Lua; Windows NT 5.1)\r\n" 
+                        .."\r\n")
+                       end) 
+conn:on("disconnection", function(conn, payload) print('\nDisconnected') end)
+                                             
+conn:connect(80,'csmju.jowave.com') 
+
+ 
         print("Sending data to thingspeak.com")
         conn=net.createConnection(net.TCP, 0) 
         conn:on("receive", function(conn, payload) print(payload) end)
